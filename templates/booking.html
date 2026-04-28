@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book a Queue Token — QueueLess AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <style>
+    .booking-wrapper {
+      max-width: 560px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+    }
+    .booking-wrapper .card {
+      padding: 2rem;
+    }
+    .booking-wrapper h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: var(--text);
+    }
+    #wait-display {
+      display: none;
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+      border-radius: var(--radius);
+      padding: 0.6rem 1rem;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    #ai-slots {
+      display: none;
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+      border-radius: var(--radius);
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    #ai-slots h4 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    #ai-slots ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #ai-slots ul li {
+      padding: 0.2rem 0;
+    }
+    #success-card {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+    #success-card .token-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin: 1rem 0 0.5rem;
+    }
+    #success-card .wait-info {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    #alert-box {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a class="navbar-brand" href="/">🎫 QueueLess AI</a>
+    <ul class="navbar-nav">
+      <li><a href="/">Home</a></li>
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/live-queue">Live Queue</a></li>
+      <li><a href="/history">History</a></li>
+      <li><a href="/notifications">Notifications</a></li>
+    </ul>
+  </nav>
+
+  <div class="booking-wrapper">
+
+    <!-- Booking Form Card -->
+    <div class="card" id="booking-card">
+      <h1>Book a Queue Token</h1>
+
+      <div id="alert-box" class="alert alert-danger"></div>
+
+      <div id="ai-slots">
+        <h4>🤖 AI Recommended Slots</h4>
+        <ul id="ai-slots-list"></ul>
+      </div>
+
+      <form id="booking-form" novalidate>
+
+        <div class="form-group">
+          <label class="form-label" for="branch-select">Branch</label>
+          <select id="branch-select" class="form-control" required>
+            <option value="">— Select a branch —</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="service-select">Service Type</label>
+          <select id="service-select" class="form-control" required>
+            <option value="">— Select a service —</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="date-input">Date</label>
+          <input type="date" id="date-input" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="slot-select">Preferred Time Slot</label>
+          <select id="slot-select" class="form-control" required>
+            <option value="">— Select a time slot —</option>
+            <option value="09:00">09:00</option>
+            <option value="10:00">10:00</option>
+            <option value="11:00">11:00</option>
+            <option value="12:00">12:00</option>
+            <option value="13:00">13:00</option>
+            <option value="14:00">14:00</option>
+            <option value="15:00">15:00</option>
+            <option value="16:00">16:00</option>
+          </select>
+        </div>
+
+        <div id="wait-display">⏱️ Estimated wait: <strong id="wait-minutes">—</strong> minutes</div>
+
+        <button type="submit" id="book-btn" class="btn btn-primary" style="width:100%;">
+          🎫 Book Token
+        </button>
+
+      </form>
+    </div>
+
+    <!-- Success Card -->
+    <div class="card" id="success-card">
+      <div style="font-size:3rem;">🎉</div>
+      <h2 style="font-size:1.3rem; font-weight:700; margin-top:0.5rem;">Token Booked!</h2>
+      <div class="token-number" id="result-token-number">—</div>
+      <div class="wait-info">Estimated wait: <strong id="result-wait-time">—</strong> minutes</div>
+      <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+      <button id="book-another-btn" class="btn btn-secondary" style="margin-top:0.5rem;">Book Another</button>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/booking.js') }}"></script>
+</body>
+</html>

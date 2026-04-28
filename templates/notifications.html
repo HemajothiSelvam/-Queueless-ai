@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notifications — Hospital Queue</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+    .notif-header h1 { font-size: 1.75rem; font-weight: 800; color: #ffffff; }
+    .notif-header h1 { font-size: 1.75rem; font-weight: 800; color: #ffffff; }
+
+    .notif-header h1 {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+    }
+    .unread-badge {
+      background: #ef4444;
+      color: white;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 0.2rem 0.6rem;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+    }
+    .mark-read-btn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 0.45rem 1rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .mark-read-btn:hover { background: rgba(255,255,255,0.35); }
+    .notif-card-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .notif-item {
+      background: white;
+      border-radius: 14px;
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-left: 4px solid #e2e8f0;
+      transition: transform 0.2s, box-shadow 0.2s;
+      animation: slideIn 0.3s ease forwards;
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    .notif-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+    .notif-item.unread {
+      border-left-color: #6366f1;
+      background: #fafbff;
+    }
+    .notif-item.type-turn { border-left-color: #10b981; }
+    .notif-item.type-delay { border-left-color: #f59e0b; }
+    @keyframes slideIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .notif-icon-wrap {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .icon-turn { background: #d1fae5; }
+    .icon-delay { background: #fef3c7; }
+    .icon-general { background: #ede9fe; }
+    .icon-changed { background: #dbeafe; }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-message {
+      font-size: 0.92rem;
+      color: #1e293b;
+      line-height: 1.5;
+      margin-bottom: 0.35rem;
+      font-weight: 500;
+    }
+    .notif-item.unread .notif-message {
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .notif-footer {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .notif-time { font-size: 0.75rem; color: #94a3b8; }
+    .notif-type-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-turn { background: #d1fae5; color: #065f46; }
+    .badge-delay { background: #fef3c7; color: #92400e; }
+    .badge-general { background: #ede9fe; color: #4c1d95; }
+    .badge-changed { background: #dbeafe; color: #1e40af; }
+    .unread-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #6366f1;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    #loading-state {
+      text-align: center;
+      padding: 3rem;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(20px);
+      border-radius: 16px;
+      color: white;
+      font-size: 1rem;
+    }
+    #empty-state {
+      display: none;
+      text-align: center;
+      padding: 4rem 2rem;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(20px);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+    }
+    #empty-state .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    #empty-state p { font-size: 1rem; opacity: 0.85; }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <a class="navbar-brand" href="/">🏥 Hospital Queue</a>
+  <ul class="navbar-nav">
+    <li><a href="/">Home</a></li>
+    <li><a href="/dashboard">Dashboard</a></li>
+    <li><a href="/booking">Book Slot</a></li>
+    <li><a href="/live-queue">Live Queue</a></li>
+    <li><a href="/history">History</a></li>
+    <li><a href="/notifications" style="color:white;font-weight:700;">Notifications</a></li>
+  </ul>
+</nav>
+
+<div class="notif-wrap">
+  <div class="notif-header">
+    <h1>🔔 Notifications <span id="unread-count" class="unread-badge" style="display:none;"></span></h1>
+    <button id="btn-mark-read" class="mark-read-btn" style="display:none;">✓ Mark all read</button>
+  </div>
+
+  <div id="loading-state">⏳ Loading notifications…</div>
+  <div id="empty-state">
+    <div class="empty-icon">🔕</div>
+    <p>No notifications yet.</p>
+    <p style="font-size:0.85rem;margin-top:0.5rem;opacity:0.7">You'll be notified when your turn is approaching.</p>
+  </div>
+  <div id="notifications-list" class="notif-card-wrap"></div>
+</div>
+
+<script>
+const TYPE_CONFIG = {
+  turn_approaching: { icon: '🏥', iconClass: 'icon-turn', badgeClass: 'badge-turn', label: 'Your Turn', itemClass: 'type-turn' },
+  queue_delay:      { icon: '⏱️', iconClass: 'icon-delay', badgeClass: 'badge-delay', label: 'Delay',    itemClass: 'type-delay' },
+  counter_changed:  { icon: '🔄', iconClass: 'icon-changed', badgeClass: 'badge-changed', label: 'Counter', itemClass: '' },
+  general:          { icon: '📢', iconClass: 'icon-general', badgeClass: 'badge-general', label: 'Info',  itemClass: '' }
+};
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const d = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (d < 60) return 'Just now';
+  if (d < 3600) return Math.floor(d/60) + ' min ago';
+  if (d < 86400) return Math.floor(d/3600) + ' hr ago';
+  return new Date(iso).toLocaleDateString();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const listEl    = document.getElementById('notifications-list');
+  const emptyEl   = document.getElementById('empty-state');
+  const loadingEl = document.getElementById('loading-state');
+  const badge     = document.getElementById('unread-count');
+  const markBtn   = document.getElementById('btn-mark-read');
+
+  try {
+    const res  = await fetch('/api/notifications');
+    const data = await res.json();
+    const notifs = data.notifications || [];
+
+    loadingEl.style.display = 'none';
+
+    if (notifs.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    const unread = notifs.filter(n => n.is_read === 0).length;
+    if (unread > 0) {
+      badge.textContent = unread;
+      badge.style.display = 'inline';
+      markBtn.style.display = 'inline-block';
+    }
+
+    listEl.innerHTML = notifs.map((n, i) => {
+      const cfg = TYPE_CONFIG[n.type] || TYPE_CONFIG.general;
+      const u   = n.is_read === 0;
+      return `
+        <div class="notif-item ${u ? 'unread' : ''} ${cfg.itemClass}" style="animation-delay:${i * 0.07}s">
+          <div class="notif-icon-wrap ${cfg.iconClass}">${cfg.icon}</div>
+          <div class="notif-body">
+            <div class="notif-message">${esc(n.message)}</div>
+            <div class="notif-footer">
+              ${u ? '<span class="unread-dot"></span>' : ''}
+              <span class="notif-time">${timeAgo(n.created_at)}</span>
+              <span class="notif-type-badge ${cfg.badgeClass}">${cfg.label}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    if (unread > 0) {
+      await fetch('/api/notifications/mark-read', { method: 'POST' });
+    }
+
+  } catch(e) {
+    loadingEl.innerHTML = '<div style="color:rgba(255,255,255,0.7)">Failed to load notifications.</div>';
+  }
+
+  markBtn.addEventListener('click', async () => {
+    await fetch('/api/notifications/mark-read', { method: 'POST' });
+    document.querySelectorAll('.notif-item.unread').forEach(el => {
+      el.classList.remove('unread');
+      const dot = el.querySelector('.unread-dot');
+      if (dot) dot.remove();
+    });
+    badge.style.display = 'none';
+    markBtn.style.display = 'none';
+  });
+});
+</script>
+</body>
+</html>

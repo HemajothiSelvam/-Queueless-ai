@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — QueueLess AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <span class="navbar-brand">🏥 Hospital Admin</span>
+    <ul class="navbar-nav">
+        <li><a href="/admin/dashboard" style="color:var(--primary)">Dashboard</a></li>
+        <li><a href="/admin/queue">Queue Mgmt</a></li>
+        <li><a href="/admin/reports">Reports</a></li>
+        <li><a href="/">Back to Site</a></li>
+        <li><button id="btn-admin-logout" class="btn btn-danger" style="padding:0.35rem 0.9rem;font-size:0.85rem;">Logout</button></li>
+    </ul>
+</nav>
+
+<div class="container" style="padding-top:2rem;padding-bottom:3rem;">
+    <div class="page-header">
+        <h1 class="page-title">Admin Dashboard</h1>
+    </div>
+
+    <!-- Stats row -->
+    <div id="stats-area">
+        <div class="grid grid-4" style="margin-bottom:2rem;">
+            <div class="card">
+                <div class="card-title">Total Users Today</div>
+                <div class="card-value" id="stat-users">—</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Total Tokens</div>
+                <div class="card-value" id="stat-tokens">—</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Avg Wait Time</div>
+                <div class="card-value" id="stat-wait">—</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Active Counters</div>
+                <div class="card-value" id="stat-counters">—</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="grid grid-2">
+        <div class="card">
+            <div class="card-title" style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Hourly Token Volume</div>
+            <div class="chart-container">
+                <canvas id="hourly-chart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title" style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">7-Day Wait Time Trend</div>
+            <div class="chart-container">
+                <canvas id="weekly-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/js/admin.js"></script>
+<script>
+document.getElementById('btn-admin-logout').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', {method: 'POST'});
+    window.location.href = '/login';
+});
+</script>
+</body>
+</html>

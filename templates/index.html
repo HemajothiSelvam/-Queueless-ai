@@ -1,0 +1,384 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QueueLess AI — Skip the Wait</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    .particles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+    .particle {
+      position: absolute; border-radius: 50%; opacity: 0.15;
+      animation: float var(--dur, 6s) ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+    }
+    .hero > .container { position: relative; z-index: 1; }
+    .hero-deco {
+      position: absolute; font-size: 3rem; opacity: 0.18; pointer-events: none;
+      animation: float var(--dur, 5s) ease-in-out infinite;
+      animation-delay: var(--delay, 0s); z-index: 0;
+    }
+    .features-section { padding: 6rem 1.5rem; }
+    .section-label {
+      display: inline-block;
+      background: rgba(99,102,241,0.15); color: #a5b4fc;
+      border: 1px solid rgba(99,102,241,0.3); border-radius: 9999px;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; padding: 0.35rem 1rem; margin-bottom: 1rem;
+    }
+    .section-heading {
+      font-size: clamp(2rem, 4vw, 3rem); font-weight: 900;
+      letter-spacing: -0.03em; color: var(--text); margin-bottom: 0.75rem;
+    }
+    .section-sub { color: var(--text-muted); font-size: 1.05rem; margin-bottom: 3rem; font-weight: 500; }
+    .feature-card { text-align: center; padding: 2.5rem 1.75rem; cursor: default; }
+    .feature-card:hover {
+      box-shadow: 0 0 40px rgba(99,102,241,0.25), 0 30px 80px rgba(0,0,0,0.6);
+      border-color: rgba(99,102,241,0.3);
+    }
+    .feature-icon {
+      font-size: 3rem; margin-bottom: 1.25rem; display: block;
+      animation: float 4s ease-in-out infinite;
+    }
+    .feature-card:nth-child(2) .feature-icon { animation-delay: 0.5s; }
+    .feature-card:nth-child(3) .feature-icon { animation-delay: 1s; }
+    .feature-card:nth-child(4) .feature-icon { animation-delay: 1.5s; }
+    .feature-card:nth-child(5) .feature-icon { animation-delay: 2s; }
+    .feature-card:nth-child(6) .feature-icon { animation-delay: 2.5s; }
+    .feature-card h3 { font-size: 1.15rem; font-weight: 800; margin-bottom: 0.6rem; color: var(--text); }
+    .feature-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; }
+    .stats-section {
+      background: linear-gradient(135deg, #0d0d20 0%, #1a1a2e 50%, #0d1b2a 100%);
+      padding: 6rem 1.5rem; text-align: center; position: relative; overflow: hidden;
+    }
+    .stats-section::before {
+      content: ''; position: absolute;
+      width: 800px; height: 400px;
+      background: radial-gradient(ellipse, rgba(99,102,241,0.15) 0%, transparent 70%);
+      top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
+    }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 2rem; max-width: 860px; margin: 0 auto; position: relative; z-index: 1;
+    }
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } }
+    .stat-item {
+      padding: 2rem; background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      backdrop-filter: blur(10px); transition: var(--transition);
+    }
+    .stat-item:hover {
+      background: rgba(99,102,241,0.08); border-color: rgba(99,102,241,0.3);
+      transform: translateY(-4px);
+    }
+    .stat-number {
+      font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 900; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #a5b4fc, #67e8f9);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; line-height: 1; margin-bottom: 0.5rem;
+    }
+    .stat-label { font-size: 0.95rem; color: var(--text-muted); font-weight: 600; }
+    .testimonials-section { padding: 6rem 1.5rem; }
+    .testimonial-wrapper { max-width: 680px; margin: 0 auto; text-align: center; }
+    .testimonial-card {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(20px); border-radius: var(--radius-xl);
+      padding: 3rem 2.5rem; margin-bottom: 2rem; position: relative;
+    }
+    .testimonial-card::before {
+      content: '\201C'; position: absolute; top: -0.5rem; left: 2rem;
+      font-size: 6rem; line-height: 1;
+      background: linear-gradient(135deg, #6366f1, #06b6d4);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; font-family: Georgia, serif; opacity: 0.6;
+    }
+    #testimonial-text {
+      font-size: 1.15rem; font-style: italic; color: var(--text);
+      margin-bottom: 1.25rem; line-height: 1.8; font-weight: 500;
+    }
+    #testimonial-author {
+      font-weight: 800; font-size: 0.95rem;
+      background: linear-gradient(135deg, #a5b4fc, #67e8f9);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .testimonial-controls { display: flex; justify-content: center; gap: 1rem; }
+    .testimonial-controls button {
+      width: 3rem; height: 3rem; border-radius: 50%;
+      border: 2px solid rgba(99,102,241,0.4); background: rgba(99,102,241,0.1);
+      color: #a5b4fc; font-size: 1.1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--transition); backdrop-filter: blur(10px);
+    }
+    .testimonial-controls button:hover {
+      background: var(--primary); border-color: var(--primary); color: #fff;
+      box-shadow: 0 0 20px rgba(99,102,241,0.5); transform: scale(1.1);
+    }
+    footer h4 { color: var(--text); font-size: 1rem; font-weight: 800; margin-bottom: 1.25rem; letter-spacing: -0.01em; }
+    footer ul { list-style: none; padding: 0; }
+    footer ul li { margin-bottom: 0.6rem; }
+    footer ul li a { font-size: 0.9rem; font-weight: 500; }
+    footer p { font-size: 0.9rem; line-height: 1.8; }
+    .footer-brand {
+      font-size: 1.4rem; font-weight: 900;
+      background: linear-gradient(135deg, #6366f1, #06b6d4);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; display: block; margin-bottom: 1rem;
+    }
+    .btn-outline-white {
+      background: rgba(255,255,255,0.08); color: #fff;
+      border: 2px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px);
+    }
+    .btn-outline-white:hover {
+      background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.6);
+      text-decoration: none; color: #fff; transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a class="navbar-brand" href="/">🎫 QueueLess AI</a>
+    <ul class="navbar-nav">
+      <li><a href="/">Home</a></li>
+      <li><a href="/live-queue">Live Queue</a></li>
+      <li><a href="/login">Login</a></li>
+      <li><a href="/register" class="btn btn-primary" style="padding:0.45rem 1.1rem;font-size:0.85rem;">Register</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <div class="particles">
+      <div class="particle" style="width:80px;height:80px;background:#6366f1;top:15%;left:8%;--dur:7s;--delay:0s;"></div>
+      <div class="particle" style="width:50px;height:50px;background:#06b6d4;top:60%;left:5%;--dur:5s;--delay:1s;"></div>
+      <div class="particle" style="width:120px;height:120px;background:#4338ca;top:20%;right:6%;--dur:9s;--delay:0.5s;"></div>
+      <div class="particle" style="width:40px;height:40px;background:#f59e0b;top:70%;right:12%;--dur:6s;--delay:2s;"></div>
+      <div class="particle" style="width:60px;height:60px;background:#10b981;top:40%;left:50%;--dur:8s;--delay:1.5s;"></div>
+    </div>
+    <span class="hero-deco" style="top:12%;left:12%;--dur:6s;--delay:0s;">🎫</span>
+    <span class="hero-deco" style="top:20%;right:14%;--dur:7s;--delay:1s;">⏱️</span>
+    <span class="hero-deco" style="bottom:18%;left:18%;--dur:5s;--delay:0.5s;">🤖</span>
+    <span class="hero-deco" style="bottom:22%;right:10%;--dur:8s;--delay:1.5s;">🔔</span>
+    <div class="container">
+      <h1>QueueLess AI</h1>
+      <p>Skip the wait. Book your spot. Arrive on time.</p>
+      <div class="hero-actions">
+        <a href="/booking" class="btn btn-primary btn-lg animate-pulse-glow">🎫 Book Token</a>
+        <a href="/live-queue" class="btn btn-outline-white btn-lg">📺 View Live Queue</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="features-section">
+    <div class="container">
+      <div style="text-align:center;">
+        <span class="section-label reveal">✨ Features</span>
+        <h2 class="section-heading reveal">Everything You Need</h2>
+        <p class="section-sub reveal">Powerful tools to make waiting a thing of the past.</p>
+      </div>
+      <div class="grid grid-3">
+        <div class="card feature-card reveal">
+          <span class="feature-icon">🎫</span>
+          <h3>Smart Queue Booking</h3>
+          <p>Reserve your spot in seconds. Choose your branch, service, and preferred time slot.</p>
+        </div>
+        <div class="card feature-card reveal">
+          <span class="feature-icon">⏱️</span>
+          <h3>Live Wait Time</h3>
+          <p>See real-time wait estimates so you can plan your visit and arrive exactly on time.</p>
+        </div>
+        <div class="card feature-card reveal">
+          <span class="feature-icon">🤖</span>
+          <h3>AI Crowd Prediction</h3>
+          <p>Our AI analyses historical patterns to recommend the least-crowded slots for you.</p>
+        </div>
+        <div class="card feature-card reveal">
+          <span class="feature-icon">🔔</span>
+          <h3>Instant Notifications</h3>
+          <p>Get notified when your turn is approaching, or if there are any queue delays.</p>
+        </div>
+        <div class="card feature-card reveal">
+          <span class="feature-icon">📊</span>
+          <h3>Admin Dashboard</h3>
+          <p>Managers get full visibility into queue health, counter performance, and daily reports.</p>
+        </div>
+        <div class="card feature-card reveal">
+          <span class="feature-icon">🔒</span>
+          <h3>Secure &amp; Reliable</h3>
+          <p>Role-based access, hashed passwords, and session management keep your data safe.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Nearby Hospitals -->
+  <section style="padding:4rem 0;background:#f0f4ff;">
+    <div class="container">
+      <h2 style="text-align:center;font-size:2rem;font-weight:700;margin-bottom:0.5rem;color:#1e293b;">🏥 Find Nearby Hospitals</h2>
+      <p style="text-align:center;color:#64748b;margin-bottom:2rem;">Allow location access to see hospitals near you</p>
+      <div id="hospital-map" style="height:400px;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);margin-bottom:1.5rem;"></div>
+      <div id="hospital-list" class="grid grid-2" style="gap:1rem;"></div>
+    </div>
+  </section>
+
+  <section class="stats-section">
+    <div class="container">
+      <div style="position:relative;z-index:1;text-align:center;">
+        <span class="section-label reveal">📈 Live Stats</span>
+        <h2 class="section-heading reveal">Trusted by Thousands</h2>
+        <p class="section-sub reveal">Real numbers from real queues, updated daily.</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item reveal">
+          <div class="stat-number" id="stat-visitors">0</div>
+          <div class="stat-label">Total Visitors Today</div>
+        </div>
+        <div class="stat-item reveal">
+          <div class="stat-number" id="stat-wait">0</div>
+          <div class="stat-label">Avg Wait Time (min)</div>
+        </div>
+        <div class="stat-item reveal">
+          <div class="stat-number" id="stat-counters">0</div>
+          <div class="stat-label">Active Counters</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="testimonials-section">
+    <div class="container">
+      <div style="text-align:center;">
+        <span class="section-label reveal">💬 Testimonials</span>
+        <h2 class="section-heading reveal">What People Say</h2>
+        <p class="section-sub reveal">Real feedback from our users.</p>
+      </div>
+      <div class="testimonial-wrapper reveal">
+        <div class="testimonial-card">
+          <p id="testimonial-text">"QueueLess AI saved me hours of waiting. I just booked my slot and showed up right on time!"</p>
+          <p id="testimonial-author">— Priya S., Regular User</p>
+        </div>
+        <div class="testimonial-controls">
+          <button id="btn-prev" aria-label="Previous testimonial">&#8592;</button>
+          <button id="btn-next" aria-label="Next testimonial">&#8594;</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <span class="footer-brand">🎫 QueueLess AI</span>
+          <p>Smarter queuing powered by AI. Skip the wait, book your spot, and arrive on time — every time.</p>
+        </div>
+        <div>
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/booking">Book Token</a></li>
+            <li><a href="/live-queue">Live Queue</a></li>
+            <li><a href="/login">Login</a></li>
+            <li><a href="/register">Register</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Contact</h4>
+          <p>Have questions or need support?</p>
+          <p style="margin-top:0.75rem;">📧 <a href="mailto:support@queueless.ai">support@queueless.ai</a></p>
+          <p style="margin-top:0.5rem;">Available Monday – Friday, 9 am – 6 pm.</p>
+        </div>
+      </div>
+      <div class="footer-bottom">&copy; 2025 QueueLess AI. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Nearby hospitals map using Leaflet.js + browser geolocation
+    async function initHospitalMap() {
+        const mapEl = document.getElementById('hospital-map');
+        if (!mapEl) return;
+
+        // Default center (Chennai, India — matches seed data)
+        let userLat = 13.0827, userLng = 80.2707;
+
+        // Try to get user's real location
+        if (navigator.geolocation) {
+            try {
+                const pos = await new Promise((resolve, reject) =>
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {timeout: 5000})
+                );
+                userLat = pos.coords.latitude;
+                userLng = pos.coords.longitude;
+            } catch (e) {
+                console.log('Geolocation denied, using default location');
+            }
+        }
+
+        // Initialize Leaflet map
+        const map = L.map('hospital-map').setView([userLat, userLng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add user location marker
+        L.marker([userLat, userLng], {
+            icon: L.divIcon({className: '', html: '<div style="background:#4f46e5;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>'})
+        }).addTo(map).bindPopup('📍 Your Location').openPopup();
+
+        // Fetch hospitals and add markers
+        try {
+            const res = await fetch('/api/branches');
+            const hospitals = await res.json();
+            const listEl = document.getElementById('hospital-list');
+
+            hospitals.forEach(h => {
+                if (!h.latitude || !h.longitude) return;
+
+                // Calculate distance (simple Haversine)
+                const R = 6371;
+                const dLat = (h.latitude - userLat) * Math.PI / 180;
+                const dLng = (h.longitude - userLng) * Math.PI / 180;
+                const a = Math.sin(dLat/2)**2 + Math.cos(userLat*Math.PI/180)*Math.cos(h.latitude*Math.PI/180)*Math.sin(dLng/2)**2;
+                const dist = (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
+
+                // Map marker
+                L.marker([h.latitude, h.longitude])
+                    .addTo(map)
+                    .bindPopup(`<b>🏥 ${h.name}</b><br>${h.location}<br><a href="/booking">Book Appointment →</a>`);
+
+                // Hospital card in list
+                if (listEl) {
+                    listEl.insertAdjacentHTML('beforeend', `
+                        <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:1rem;display:flex;align-items:center;gap:1rem;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                            <div style="font-size:2rem;">🏥</div>
+                            <div style="flex:1;">
+                                <div style="font-weight:700;color:#1e293b;">${h.name}</div>
+                                <div style="font-size:0.85rem;color:#64748b;">${h.location}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:0.85rem;color:#6366f1;font-weight:600;">${dist} km away</div>
+                                <a href="/booking" class="btn btn-primary" style="padding:0.3rem 0.8rem;font-size:0.8rem;margin-top:0.3rem;">Book</a>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+        } catch(e) {
+            console.error('Failed to load hospitals', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', initHospitalMap);
+  </script>
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

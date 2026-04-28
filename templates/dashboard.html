@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Dashboard — Hospital Queue</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    .emergency-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2.5rem; border-radius: 16px; margin-bottom: 2rem; }
+    .emergency-section h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .emergency-section p { opacity: 0.9; margin-bottom: 1.25rem; font-size: 0.95rem; }
+    .emergency-input { width: 100%; padding: 0.85rem 1rem; border: none; border-radius: 10px; font-size: 1rem; margin-bottom: 1rem; box-sizing: border-box; }
+    .hospital-card { background: white; color: #1e293b; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-left: 4px solid #667eea; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 1rem; }
+    .hospital-card .dist { font-size: 0.8rem; color: #667eea; font-weight: 700; background: #ede9fe; padding: 0.2rem 0.6rem; border-radius: 999px; }
+    .dept-tag { display: inline-block; background: #dbeafe; color: #1e40af; font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 999px; margin: 0.15rem; }
+    .dept-tag.match { background: #d1fae5; color: #065f46; }
+    #emergency-map { height: 300px; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; }
+    .section-divider { border: none; border-top: 2px dashed #e2e8f0; margin: 2rem 0; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="/">🏥 Hospital Queue</a>
+  <ul class="navbar-nav">
+    <li><a href="/">Home</a></li>
+    <li><a href="/dashboard" style="color:var(--primary);font-weight:700;">Dashboard</a></li>
+    <li><a href="/booking">Book Slot</a></li>
+    <li><a href="/live-queue">Live Queue</a></li>
+    <li><a href="/history">History</a></li>
+    <li><a href="/notifications">Notifications</a></li>
+    <li><button id="btn-logout" class="btn btn-secondary" style="padding:0.35rem 0.9rem;font-size:0.85rem;">Logout</button></li>
+  </ul>
+</nav>
+
+<div class="container" style="padding-top:2rem;padding-bottom:3rem;">
+
+  <!-- Step 1: Emergency Finder -->
+  <div class="emergency-section">
+    <h2>🚨 Find a Hospital for Your Emergency</h2>
+    <p>Describe your medical emergency and we'll find the nearest hospital with the right department.</p>
+    <textarea id="emergency-input" class="emergency-input" rows="2" placeholder="e.g. chest pain, broken arm, high fever, child with rash..."></textarea>
+    <button id="btn-find-hospitals" class="btn btn-primary" style="background:white;color:#667eea;font-weight:700;padding:0.75rem 2rem;">
+      📍 Find Nearby Hospitals
+    </button>
+  </div>
+
+  <!-- Map -->
+  <div id="emergency-map" style="display:none;"></div>
+
+  <!-- Hospital results -->
+  <div id="hospital-results" style="display:none;">
+    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">🏥 Recommended Hospitals</h3>
+    <div id="hospital-list"></div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- Step 2: Active token status -->
+  <div id="loading-state" style="text-align:center;padding:2rem;color:var(--text-muted);">
+    <p>⏳ Loading your queue status…</p>
+  </div>
+
+  <div id="connectivity-warning" class="connectivity-warning">
+    ⚠️ Connection issue — showing last known values.
+  </div>
+
+  <div id="token-section" style="display:none;">
+    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">🎫 Your Current Appointment</h3>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="label">Token Number</div>
+        <div class="value" id="val-token-number">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Estimated Wait</div>
+        <div class="value" id="val-wait-time">— min</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">People Ahead</div>
+        <div class="value" id="val-people-ahead">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Status</div>
+        <div class="value" id="val-status"><span class="badge badge-waiting">—</span></div>
+      </div>
+    </div>
+    <div class="action-row" style="margin-top:1rem;">
+      <button id="btn-cancel" class="btn btn-danger">✕ Cancel Token</button>
+      <button id="btn-refresh" class="btn btn-secondary">↻ Refresh</button>
+      <a href="/history" class="btn btn-secondary">📋 History</a>
+    </div>
+  </div>
+
+  <div id="empty-state" class="empty-state" style="display:none;">
+    <div class="empty-icon">🎫</div>
+    <p>No active appointment. Find a hospital above and book a slot.</p>
+    <a href="/booking" class="btn btn-primary">Book Appointment</a>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+// ── Emergency keyword → department mapping ──────────────────────────────────
+const EMERGENCY_MAP = {
+  'chest': 'Cardiology', 'heart': 'Cardiology', 'cardiac': 'Cardiology',
+  'bone': 'Orthopedics', 'fracture': 'Orthopedics', 'broken': 'Orthopedics', 'joint': 'Orthopedics',
+  'child': 'Pediatrics', 'baby': 'Pediatrics', 'infant': 'Pediatrics', 'kid': 'Pediatrics',
+  'fever': 'General Medicine', 'cold': 'General Medicine', 'pain': 'General Medicine',
+  'headache': 'General Medicine', 'stomach': 'General Medicine', 'vomit': 'General Medicine',
+  'breath': 'Cardiology', 'dizzy': 'General Medicine', 'rash': 'General Medicine'
+};
+
+let emergencyMap = null;
+let liveMarker = null;
+let watchId = null;
+let userLat = 13.0827, userLng = 80.2707; // default: Chennai
+
+function getMatchedDept(text) {
+  const lower = text.toLowerCase();
+  for (const [keyword, dept] of Object.entries(EMERGENCY_MAP)) {
+    if (lower.includes(keyword)) return dept;
+  }
+  return 'General Medicine';
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
+}
+
+// ── Live location status indicator ─────────────────────────────────────────
+const locationStatus = document.createElement('div');
+locationStatus.style.cssText = 'font-size:0.8rem;color:#059669;font-weight:600;margin-top:0.5rem;';
+locationStatus.textContent = '📍 Requesting live location...';
+document.querySelector('.emergency-section').appendChild(locationStatus);
+
+// Add pulse animation for the live marker
+const pulseStyle = document.createElement('style');
+pulseStyle.textContent = '@keyframes pulse { 0%,100%{box-shadow:0 0 0 4px rgba(239,68,68,0.3)} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0.1)} }';
+document.head.appendChild(pulseStyle);
+
+// ── Live location tracking ──────────────────────────────────────────────────
+function startLiveTracking() {
+  if (!navigator.geolocation) {
+    locationStatus.textContent = '⚠️ Geolocation not supported by your browser';
+    locationStatus.style.color = '#dc2626';
+    return;
+  }
+
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+      locationStatus.textContent = `📍 Live Location Active — ${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+      locationStatus.style.color = '#059669';
+
+      // Update map marker if map is already open
+      if (emergencyMap && liveMarker) {
+        liveMarker.setLatLng([userLat, userLng]);
+        emergencyMap.panTo([userLat, userLng]);
+      }
+    },
+    () => {
+      locationStatus.textContent = '⚠️ Location access denied — using default location (Chennai)';
+      locationStatus.style.color = '#f59e0b';
+    },
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+  );
+}
+
+// ── Find hospitals button ───────────────────────────────────────────────────
+document.getElementById('btn-find-hospitals').addEventListener('click', async () => {
+  const emergency = document.getElementById('emergency-input').value.trim();
+  if (!emergency) {
+    alert('Please describe your medical emergency first.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-find-hospitals');
+  btn.textContent = '🔍 Finding hospitals...';
+  btn.disabled = true;
+
+  const res = await fetch('/api/branches');
+  const hospitals = await res.json();
+  const matchedDept = getMatchedDept(emergency);
+
+  const withDist = hospitals
+    .filter(h => h.latitude && h.longitude)
+    .map(h => ({ ...h, dist: parseFloat(haversine(userLat, userLng, h.latitude, h.longitude)) }))
+    .sort((a, b) => a.dist - b.dist);
+
+  // Show / init map
+  const mapEl = document.getElementById('emergency-map');
+  mapEl.style.display = 'block';
+
+  if (!emergencyMap) {
+    emergencyMap = L.map('emergency-map').setView([userLat, userLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(emergencyMap);
+  } else {
+    emergencyMap.setView([userLat, userLng], 12);
+  }
+
+  // Live location marker (red pulsing dot)
+  if (liveMarker) {
+    liveMarker.setLatLng([userLat, userLng]);
+  } else {
+    liveMarker = L.marker([userLat, userLng], {
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="background:#ef4444;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 0 4px rgba(239,68,68,0.3);animation:pulse 1.5s infinite;"></div>'
+      })
+    }).addTo(emergencyMap).bindPopup('📍 Your Live Location');
+  }
+
+  // Hospital markers
+  withDist.forEach(h => {
+    L.marker([h.latitude, h.longitude])
+      .addTo(emergencyMap)
+      .bindPopup(`<b>🏥 ${h.name}</b><br>${h.location}<br><b>Dept:</b> ${matchedDept}<br><a href="/booking">Book →</a>`);
+  });
+
+  // Render hospital cards
+  const listEl = document.getElementById('hospital-list');
+  listEl.innerHTML = '';
+
+  for (const h of withDist) {
+    let depts = [];
+    try {
+      const sr = await fetch(`/api/branches/${h.id}/services`);
+      depts = await sr.json();
+    } catch(e) {}
+
+    const deptTags = depts.map(d =>
+      `<span class="dept-tag ${d.name === matchedDept ? 'match' : ''}">${d.name === matchedDept ? '✓ ' : ''}${d.name}</span>`
+    ).join('');
+
+    listEl.insertAdjacentHTML('beforeend', `
+      <div class="hospital-card">
+        <div style="font-size:2.5rem;">🏥</div>
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:1.05rem;">${h.name}</div>
+          <div style="font-size:0.85rem;color:#64748b;margin-bottom:0.5rem;">${h.location}</div>
+          <div>${deptTags}</div>
+          ${h.dist <= 5 ? '<div style="font-size:0.8rem;color:#059669;font-weight:600;margin-top:0.4rem;">⚡ Nearest hospital</div>' : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <span class="dist">${h.dist} km</span><br>
+          <a href="/booking" class="btn btn-primary" style="margin-top:0.5rem;padding:0.4rem 1rem;font-size:0.85rem;">Book Now</a>
+        </div>
+      </div>
+    `);
+  }
+
+  document.getElementById('hospital-results').style.display = 'block';
+  btn.textContent = '📍 Find Nearby Hospitals';
+  btn.disabled = false;
+});
+
+// Start live tracking immediately on page load
+startLiveTracking();
+</script>
+</body>
+</html>

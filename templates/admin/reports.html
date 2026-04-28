@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports — QueueLess AI Admin</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <span class="navbar-brand">🏥 Hospital Admin</span>
+    <ul class="navbar-nav">
+        <li><a href="/admin/dashboard">Dashboard</a></li>
+        <li><a href="/admin/queue">Queue Mgmt</a></li>
+        <li><a href="/admin/reports" style="color:var(--primary)">Reports</a></li>
+        <li><a href="/">Back to Site</a></li>
+        <li><button id="btn-admin-logout" class="btn btn-danger" style="padding:0.35rem 0.9rem;font-size:0.85rem;">Logout</button></li>
+    </ul>
+</nav>
+
+<div class="container" style="padding-top:2rem;padding-bottom:3rem;">
+    <div class="page-header">
+        <h1 class="page-title">Reports</h1>
+    </div>
+    <p style="color:var(--text-muted)">Report generation will be available in a later task.</p>
+</div>
+
+<script>
+document.getElementById('btn-admin-logout').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', {method: 'POST'});
+    window.location.href = '/login';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Queue History — QueueLess AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <style>
+    .history-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+    }
+
+    /* Table */
+    .history-table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+    }
+
+    #history-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      font-size: 0.9rem;
+    }
+
+    #history-table thead {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    #history-table thead th {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #history-table tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    #history-table tbody tr:hover {
+      background: #ede9fe;
+    }
+
+    #history-table tbody td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    #history-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* States */
+    #loading-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    #empty-state {
+      display: none;
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Pagination */
+    #pagination {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    #page-info {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a class="navbar-brand" href="/">🎫 QueueLess AI</a>
+    <ul class="navbar-nav">
+      <li><a href="/">Home</a></li>
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/booking">Booking</a></li>
+      <li><a href="/live-queue">Live Queue</a></li>
+      <li><a href="/history" class="active" style="color: var(--primary);">History</a></li>
+      <li><a href="/notifications">Notifications</a></li>
+    </ul>
+  </nav>
+
+  <div class="history-wrapper">
+
+    <div class="page-header">
+      <h1 class="page-title">My Queue History</h1>
+    </div>
+
+    <!-- Loading state -->
+    <div id="loading-state">⏳ Loading history…</div>
+
+    <!-- Empty state -->
+    <div id="empty-state">📭 No queue history yet. <a href="/booking">Book your first token!</a></div>
+
+    <!-- History table -->
+    <div class="history-table-wrap" id="history-table-wrap" style="display:none;">
+      <table id="history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Token Number</th>
+            <th>Branch</th>
+            <th>Service</th>
+            <th>Wait Time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination">
+      <button id="btn-prev" class="btn btn-secondary">&#8592; Previous</button>
+      <span id="page-info">Page 1 of 1</span>
+      <button id="btn-next" class="btn btn-secondary">Next &#8594;</button>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/history.js') }}"></script>
+</body>
+</html>

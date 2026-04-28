@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Queue Status — QueueLess AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+  <style>
+    .queue-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 1.5rem;
+    }
+    .token-display {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 0.05em;
+      min-height: 4.5rem;
+    }
+    .token-display.empty {
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      font-weight: 400;
+    }
+    .selectors-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      align-items: flex-end;
+    }
+    .selectors-row .form-group {
+      margin-bottom: 0;
+      min-width: 200px;
+    }
+    .refresh-info {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 1rem;
+    }
+    .progress-wrap {
+      margin-top: 1rem;
+    }
+    .progress-wrap .progress {
+      height: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a class="navbar-brand" href="/">🎫 QueueLess AI</a>
+    <ul class="navbar-nav">
+      <li><a href="/">Home</a></li>
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/booking">Booking</a></li>
+      <li><a href="/live-queue" class="active" style="color: var(--primary);">Live Queue</a></li>
+      <li><a href="/history">History</a></li>
+      <li><a href="/notifications">Notifications</a></li>
+    </ul>
+  </nav>
+
+  <div class="container" style="padding-top: 2rem; padding-bottom: 3rem;">
+
+    <div class="page-header">
+      <h1 class="page-title">Live Queue Status</h1>
+    </div>
+
+    <!-- Connectivity warning -->
+    <div id="connectivity-warning" class="connectivity-warning">
+      ⚠️ Connection issue — showing last known values. Retrying…
+    </div>
+
+    <!-- Selectors -->
+    <div class="selectors-row">
+      <div class="form-group">
+        <label class="form-label" for="branch-select">Branch</label>
+        <select id="branch-select" class="form-control">
+          <option value="">Select a branch…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="counter-select">Counter</label>
+        <select id="counter-select" class="form-control">
+          <option value="">All Counters</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Queue status card -->
+    <div class="queue-card">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; flex-wrap: wrap;">
+
+        <!-- Now serving -->
+        <div>
+          <div class="form-label" style="margin-bottom: 0.5rem;">Now Serving</div>
+          <div id="current-token" class="token-display empty">—</div>
+        </div>
+
+        <!-- My token -->
+        <div>
+          <div class="form-label" style="margin-bottom: 0.5rem;">My Token Number</div>
+          <input
+            id="my-token-input"
+            class="form-control"
+            type="text"
+            placeholder="e.g. BR1-20250101-003"
+            style="font-size: 1rem; max-width: 260px;"
+          />
+          <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+            Enter your token to track your position
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-row" style="margin-top: 1.5rem; grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card">
+          <div class="label">People Ahead</div>
+          <div class="value" id="people-ahead">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Served Today</div>
+          <div class="value" id="served-today">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Total Today</div>
+          <div class="value" id="total-today">—</div>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="progress-wrap">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <span class="form-label" style="margin-bottom: 0;">Queue Progress</span>
+          <span id="progress-label" style="font-size: 0.85rem; color: var(--text-muted);">0% complete</span>
+        </div>
+        <div class="progress">
+          <div id="queue-progress" class="progress-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Refresh info -->
+      <div class="refresh-info">
+        🔄 Auto-refreshing every 10 seconds &nbsp;·&nbsp;
+        Last updated: <span id="last-updated">—</span>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/live-queue.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue Management — Hospital Admin</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <style>
+        .counter-card { border: 2px solid var(--border); border-radius: 12px; padding: 1.5rem; background: white; }
+        .counter-card.active { border-color: var(--success); }
+        .counter-card.inactive { border-color: var(--border); opacity: 0.7; }
+        .patient-row { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+        .patient-row:last-child { border-bottom: none; }
+        .patient-row.serving { background: #dbeafe; border-left: 4px solid var(--primary); }
+        .token-badge { font-size: 1.1rem; font-weight: 800; color: var(--primary); min-width: 120px; }
+        .done-btn { background: var(--success); color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+        .done-btn:hover { background: #059669; }
+        .status-badge { padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+        .status-waiting { background: #fef3c7; color: #92400e; }
+        .status-serving { background: #dbeafe; color: #1e40af; }
+        #action-alert { display: none; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        .alert-success-box { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .alert-error-box { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <span class="navbar-brand">🏥 Hospital Admin</span>
+    <ul class="navbar-nav">
+        <li><a href="/admin/dashboard">Dashboard</a></li>
+        <li><a href="/admin/queue" style="color:var(--primary)">Queue Mgmt</a></li>
+        <li><a href="/admin/reports">Reports</a></li>
+        <li><a href="/">Back to Site</a></li>
+        <li><button id="btn-admin-logout" class="btn btn-danger" style="padding:0.35rem 0.9rem;font-size:0.85rem;">Logout</button></li>
+    </ul>
+</nav>
+
+<div class="container" style="padding-top:2rem;padding-bottom:3rem;">
+    <div class="page-header">
+        <h1 class="page-title">🏥 Queue Management</h1>
+        <p style="color:var(--text-muted);margin-top:0.25rem;">Mark patients as done to automatically call the next patient</p>
+    </div>
+
+    <div id="action-alert"></div>
+
+    <!-- Counter selector -->
+    <div class="card" style="margin-bottom:1.5rem;padding:1.25rem;">
+        <label class="form-label">Select Doctor Room / Counter</label>
+        <select id="counter-select" class="form-control" style="max-width:300px;">
+            <option value="">Loading counters...</option>
+        </select>
+    </div>
+
+    <!-- Current queue display -->
+    <div class="grid grid-2" style="gap:1.5rem;margin-bottom:1.5rem;">
+        <!-- Now Serving -->
+        <div class="card" style="padding:1.5rem;">
+            <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.75rem;">NOW SERVING</div>
+            <div id="now-serving-display" style="font-size:2.5rem;font-weight:800;color:var(--primary);min-height:3rem;">—</div>
+            <div id="now-serving-name" style="color:var(--text-muted);font-size:0.9rem;margin-top:0.25rem;"></div>
+            <button id="btn-patient-done" class="done-btn" style="margin-top:1rem;width:100%;padding:0.75rem;font-size:1rem;" onclick="markPatientDone()">
+                ✅ Patient Done — Call Next
+            </button>
+        </div>
+
+        <!-- Queue Stats -->
+        <div class="card" style="padding:1.5rem;">
+            <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.75rem;">QUEUE STATUS</div>
+            <div class="grid grid-2" style="gap:1rem;">
+                <div>
+                    <div style="font-size:2rem;font-weight:800;" id="stat-waiting">0</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted);">Waiting</div>
+                </div>
+                <div>
+                    <div style="font-size:2rem;font-weight:800;color:var(--success);" id="stat-served">0</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted);">Served Today</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting patients list -->
+    <div class="card" style="padding:0;">
+        <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="font-size:1rem;font-weight:700;">Waiting Patients</h3>
+            <button onclick="loadQueue()" class="btn btn-secondary" style="padding:0.35rem 0.9rem;font-size:0.85rem;">↻ Refresh</button>
+        </div>
+        <div id="queue-list">
+            <div style="padding:2rem;text-align:center;color:var(--text-muted);">Select a counter to view the queue</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentCounterId = null;
+
+// Load counters on page load
+async function loadCounters() {
+    try {
+        const res = await fetch('/api/admin/counters');
+        const counters = await res.json();
+        const sel = document.getElementById('counter-select');
+        sel.innerHTML = '<option value="">— Select a counter —</option>';
+        counters.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.name} (${c.branch_name}) — ${c.status}`;
+            sel.appendChild(opt);
+        });
+    } catch(e) {
+        console.error('Failed to load counters', e);
+    }
+}
+
+// Load queue for selected counter
+async function loadQueue() {
+    const counterId = document.getElementById('counter-select').value;
+    if (!counterId) return;
+    currentCounterId = counterId;
+
+    try {
+        const res = await fetch(`/api/admin/queue/current?counter_id=${counterId}`);
+        const data = await res.json();
+
+        // Update now serving
+        const serving = data.now_serving;
+        document.getElementById('now-serving-display').textContent = serving ? serving.token_number : '—';
+        document.getElementById('now-serving-name').textContent = serving ? (serving.patient_name || '') : 'No patient currently';
+
+        // Update stats
+        document.getElementById('stat-waiting').textContent = data.waiting_count || 0;
+        document.getElementById('stat-served').textContent = data.served_today || 0;
+
+        // Render waiting list
+        const listEl = document.getElementById('queue-list');
+        const waiting = data.waiting || [];
+        if (waiting.length === 0) {
+            listEl.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);">No patients waiting 🎉</div>';
+            return;
+        }
+        listEl.innerHTML = waiting.map((t, i) => `
+            <div class="patient-row">
+                <div class="token-badge">${t.token_number}</div>
+                <div style="flex:1;">
+                    <div style="font-weight:600;">${t.patient_name || 'Patient'}</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted);">${t.service_name || ''} · Slot: ${t.preferred_slot || '—'}</div>
+                </div>
+                <div style="text-align:right;">
+                    <span class="status-badge status-waiting">Waiting</span>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Position #${i + 1}</div>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        console.error('Failed to load queue', e);
+    }
+}
+
+// Mark current patient as done and call next
+async function markPatientDone() {
+    if (!currentCounterId) {
+        showAlert('Please select a counter first.', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('btn-patient-done');
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    try {
+        const res = await fetch('/api/admin/queue/patient-done', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({counter_id: parseInt(currentCounterId)})
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            let msg = `✅ Patient ${data.served_token || ''} marked as done.`;
+            if (data.next_token) {
+                msg += ` Next patient ${data.next_token} has been notified.`;
+            } else {
+                msg += ' Queue is now empty.';
+            }
+            showAlert(msg, 'success');
+            await loadQueue();
+        } else {
+            showAlert(data.error || 'Failed to update queue.', 'error');
+        }
+    } catch(e) {
+        showAlert('Network error. Please try again.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '✅ Patient Done — Call Next';
+    }
+}
+
+function showAlert(msg, type) {
+    const el = document.getElementById('action-alert');
+    el.textContent = msg;
+    el.className = type === 'success' ? 'alert-success-box' : 'alert-error-box';
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+document.getElementById('counter-select').addEventListener('change', loadQueue);
+document.addEventListener('DOMContentLoaded', loadCounters);
+</script>
+<script>
+document.getElementById('btn-admin-logout').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', {method: 'POST'});
+    window.location.href = '/login';
+});
+</script>
+</body>
+</html>
