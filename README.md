@@ -180,4 +180,30 @@ pytest tests/ -v
 - **Testing**: pytest, Hypothesis (property-based testing)
 
 ## 📸 Screenshots
-![Dashboard](screenshots/dashboard.png)
+
+### Login Page
+![Login Page](Screenshots/login-page.png)
+
+### Front Page
+![Front Page](Screenshots/front-page.png)
+
+### Patient Dashboard
+![Patient Dashboard](Screenshots/dashboard.png)
+
+### Appointment Booking
+![Appointment Booking](Screenshots/appointment-booking.png)
+
+### Appointment Slot Selection
+![Appointment Slot Selection](Screenshots/appointment-slot.png)
+
+### Admin Dashboard
+![Admin Dashboard](Screenshots/admin-dashboard.png)
+
+### Admin Queue Management
+![Admin Queue Management](Screenshots/admin-queue-management.png)
+
+### Live Queue Dashboard
+![Live Queue Dashboard](Screenshots/live-dashboard.png)
+
+### Nearby Hospital Recommendation
+![Nearby Hospital Recommendation](Screenshots/location-based-hospital.png)
